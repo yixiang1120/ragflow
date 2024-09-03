@@ -29,6 +29,7 @@ import requests
 from rag.nlp import is_english
 from api.utils import get_uuid
 from api.utils.file_utils import get_project_base_directory
+from google.generativeai import client, GenerativeModel, GenerationConfig
 
 
 class Base(ABC):
