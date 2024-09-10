@@ -36,7 +36,7 @@ class Base(ABC):
     def __init__(self, key, model_name):
         pass
 
-    def describe(self, image, max_tokens=3072):
+    def describe(self, image, max_tokens=16385):
         raise NotImplementedError("Please implement encode method!")
         
     def chat(self, system, history, gen_conf, image=""):
@@ -50,7 +50,7 @@ class Base(ABC):
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=history,
-                max_tokens=gen_conf.get("max_tokens", 3072),
+                max_tokens=gen_conf.get("max_tokens", 16385),
                 temperature=gen_conf.get("temperature", 0.3),
                 top_p=gen_conf.get("top_p", 0.7)
             )
@@ -72,7 +72,7 @@ class Base(ABC):
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=history,
-                max_tokens=gen_conf.get("max_tokens", 3072),
+                max_tokens=gen_conf.get("max_tokens", 16385),
                 temperature=gen_conf.get("temperature", 0.3),
                 top_p=gen_conf.get("top_p", 0.7),
                 stream=True
@@ -116,15 +116,19 @@ class Base(ABC):
                         },
                     },
                     {
-                        "text": """請回答繁體中文，請描述圖片中的內容，並遵守以下準則：
-                            1.若為圖表類型，請著重提取出數據資訊；若無數據資訊圖片，則描述例如時間，地點，人物，事情，人物心情等。
-                            2.確保輸出和使用識別到的圖片的相同的語言，例如，識別到的英語字段，輸出的內容必須是英語。
-                            3.不要解釋和輸出無關的文字，直接輸出圖片中的內容。"""
+                        "text": """回答使用繁體中文，你將會收到一張圖片，其中可能包含圖表、數據或其他視覺資訊。你的任務是：
+                        1. 識別並列出圖片中的所有資訊，包括但不限於標題、軸標籤、圖例、數據點、年份、比例和圖表名稱。
+                        2. 注重細節，確保每個可見數據點或文字內容都被提取出來。請列出圖表中每個數據值（如果有）。
+                        3. 分段整理資訊，如標題、圖例、橫軸和縱軸的標籤和單位、具體的數據點（按年份）等。
+                        4. 不要加入推測性或解釋性內容，僅列出圖片中所能直接觀察到的資訊。
+                        5. 輸出的語言必須與圖片中的語言一致。如果圖片中的文字為中文，輸出也必須為中文；如果為英文，輸出也必須為英文。"""
                         if self.lang.lower() == "chinese" else
-                        """Please describe the contents of the image in detail, and adhere to the following guidelines:
-                            1. If the image is of a chart type, please extract the data information; if there is no data information in the image, then describe aspects such as time, location, people, events, and the emotions of the people.
-                            2. Ensure that the output is in the same language as the identified image content, for example, if the identified fields are in English, the output must be in English.
-                            3. Do not interpret and output irrelevant text, directly output the contents of the image.""",
+                        """Answer Traditional Chinese. You will receive an image that may contain charts, data, or other visual information. Your task is to:
+                        1. Identify and list all the information in the image, including but not limited to titles, axis labels, legends, data points, years, scales, and chart names.
+                        2. Pay attention to detail to ensure that every visible data point or text content is extracted. Please list the data values for each year (if any) shown in the chart.
+                        3. Organize the information into sections, such as titles, legends, labels and units of the horizontal and vertical axes, specific data points (by year), etc.
+                        4. Do not add speculative or interpretative content; only list the information that can be directly observed in the image.
+                        5. The output language must match the language in the image. If the text in the image is in Chinese, the output must also be in Chinese; if it is in English, the output must also be in English.""",
                     },
                 ],
             }
@@ -159,7 +163,7 @@ class GptV4(Base):
              {"text": text},
          ]
     
-    def describe(self, image, max_tokens=3072):
+    def describe(self, image, max_tokens=16385):
         b64 = self.image2base64(image)
         prompt = self.prompt(b64)
         for i in range(len(prompt)):
@@ -240,7 +244,7 @@ class AzureGptV4(Base):
         self.model_name = model_name
         self.lang = lang
 
-    def describe(self, image, max_tokens=2048):
+    def describe(self, image, max_tokens=16385):
         b64 = self.image2base64(image)
         prompt = self.prompt(b64)
         for i in range(len(prompt)):
@@ -277,10 +281,12 @@ class QWenCV(Base):
                         "image": f"file://{path}"
                     },
                     {
-                        "text": """請描述圖片中的內容，並遵守以下準則：
-                            1.若為圖表類型，請著重提取出數據資訊；若無數據資訊圖片，則描述例如時間，地點，人物，事情，人物心情等。
-                            2.確保輸出和使用識別到的圖片的相同的語言，例如，識別到的英語字段，輸出的內容必須是英語。
-                            3.不要解釋和輸出無關的文字，直接輸出圖片中的內容。"""
+                        "text": """回答繁體中文，你將會收到一張圖片，其中可能包含圖表、數據或其他視覺資訊。你的任務是：
+                        1. 識別並列出圖片中的所有資訊**，包括但不限於標題、軸標籤、圖例、數據點、年份、比例和圖表名稱。
+                        2. 注重細節，確保每個可見數據點或文字內容都被提取出來。請列出圖表中每個年份的數據值（如果有）。
+                        3. 分段整理資訊，如標題、圖例、橫軸和縱軸的標籤和單位、具體的數據點（按年份）等。
+                        4. 不要加入推測性或解釋性內容，僅列出圖片中所能直接觀察到的資訊。
+                        5. 輸出的語言必須與圖片中的語言一致。如果圖片中的文字為中文，輸出也必須為中文；如果為英文，輸出也必須為英文。"""
                         if self.lang.lower() == "chinese" else
                         """Please describe the contents of the image in detail, and adhere to the following guidelines:
                             1. If the image is of a chart type, please extract the data information; if there is no data information in the image, then describe aspects such as time, location, people, events, and the emotions of the people.
@@ -443,7 +449,7 @@ class OllamaCV(Base):
         self.model_name = model_name
         self.lang = lang
 
-    def describe(self, image, max_tokens=2048):
+    def describe(self, image, max_tokens=16385):
         prompt = self.prompt("")
         try:
             options = {"num_predict": max_tokens}

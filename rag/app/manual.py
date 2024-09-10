@@ -287,6 +287,11 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 def covert_image(image_pil, callback):
     try:
         img_byte_arr = io.BytesIO()
+        save_path='saved_image.png'
+        width, height = image_pil.size
+        callback(0.6, f"Image dimensions: {width}x{height}")
+
+        image_pil.save(save_path, format='PNG')
         image_pil.save(img_byte_arr, format='PNG')
         callback(0.7, "Use CV LLM to describe the picture.")
         return img_byte_arr.getvalue()
